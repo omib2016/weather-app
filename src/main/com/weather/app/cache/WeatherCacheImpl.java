@@ -3,9 +3,7 @@ package main.com.weather.app.cache;
 import main.com.weather.app.entity.WeatherDetails;
 import main.com.weather.app.service.RemoteService;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -13,15 +11,22 @@ import java.util.concurrent.*;
  */
 public class WeatherCacheImpl implements WeatherCache
 {
+    //weather cache keyed on city
     private final ConcurrentMap<String,WeatherDetails> weatherCache = new ConcurrentHashMap<>();
-    private final List<String> subscriptionList = Collections.synchronizedList(new ArrayList<String>());
+    //subscription set used to subscribe for weather updates
+    private final Set<String> subscriptionSet = Collections.synchronizedSet(new HashSet<String>());
+    //Openweather service interface
     private final RemoteService remoteService;
+    //scheduler
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+    //configurable polling interval
+    private final int intervalInSeconds;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public WeatherCacheImpl(RemoteService remoteService)
+    public WeatherCacheImpl(RemoteService remoteService, int intervalInSeconds)
     {
         this.remoteService = remoteService;
+        this.intervalInSeconds = intervalInSeconds;
     }
 
 
@@ -33,7 +38,7 @@ public class WeatherCacheImpl implements WeatherCache
             return weatherCache.get(city);
         }
         else {
-            subscriptionList.add(city);
+            subscriptionSet.add(city);
             WeatherDetails weatherDetailsForCity = remoteService.getWeatherDetailsForCity(city);
             weatherCache.replace(city,weatherDetailsForCity);
             return weatherDetailsForCity;
@@ -44,7 +49,7 @@ public class WeatherCacheImpl implements WeatherCache
     public boolean populate()
     {
         //update each city weather every 5 minutes
-        scheduledExecutorService.schedule(new WeatherRunnable(), 300, TimeUnit.SECONDS);
+        scheduledExecutorService.schedule(new WeatherRunnable(), intervalInSeconds, TimeUnit.SECONDS);
 
         return true;
     }
@@ -63,12 +68,12 @@ public class WeatherCacheImpl implements WeatherCache
         @Override
         public void run()
         {
-           populate();
+           updateAll();
         }
 
-        public boolean populate()
+        private boolean updateAll()
         {
-            for (String city : subscriptionList)
+            for (String city : subscriptionSet)
             {
                executorService.submit(new WeatherUpdater(remoteService,city));
             }
