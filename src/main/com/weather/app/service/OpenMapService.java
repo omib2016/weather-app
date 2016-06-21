@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Created by omib on 20/06/2016.
@@ -38,7 +40,7 @@ public class OpenMapService implements RemoteService
     @Override
     public WeatherDetails getWeatherDetailsForCity(String city)
     {
-        log.info("Looking up OpenMap weather for "+city);
+        log.info("Looking up OpenMap weather for " + city);
         StringBuilder urlWithParamForCelcius = new StringBuilder(requestUrl);
         urlWithParamForCelcius.append("&q=").append(city).append("&units=metric");
 
@@ -46,17 +48,24 @@ public class OpenMapService implements RemoteService
         urlWithParamForFaranheit.append("&q=").append(city).append("&units=imperial");
 
 
-        OpenWeatherResponse weatherInCelcius = restTemplate.getForObject(urlWithParamForCelcius.toString(), OpenWeatherResponse.class);
-        OpenWeatherResponse weatherInFaranheit = restTemplate.getForObject(urlWithParamForFaranheit.toString(), OpenWeatherResponse.class);
+        OpenWeatherResponse weatherInCelsius = restTemplate.getForObject(urlWithParamForCelcius.toString(), OpenWeatherResponse.class);
+        OpenWeatherResponse weatherInFahrenheit = restTemplate.getForObject(urlWithParamForFaranheit.toString(), OpenWeatherResponse.class);
+
+        Calendar date = Calendar.getInstance();
+        date.setTimeInMillis(weatherInCelsius.getDt());
 
         WeatherDetails.WeatherDetailsBuilder responseBuilder = new WeatherDetails.WeatherDetailsBuilder();
-        responseBuilder.withDate(new Date(weatherInCelcius.getDt()));
-        responseBuilder.withCityName(weatherInCelcius.getName());
-        responseBuilder.withDescription(weatherInCelcius.getWeather()[0].getDescription());
-        responseBuilder.withTempInCelcius(weatherInCelcius.getMain().getTemp());
-        responseBuilder.withTempInfaranheit(weatherInFaranheit.getMain().getTemp());
-        responseBuilder.withSunrise(new Date(weatherInCelcius.getSys().getSunrise()));
-        responseBuilder.withSunset(new Date(weatherInCelcius.getSys().getSunset()));
+        responseBuilder.withDate(date.getTime());
+        responseBuilder.withCityName(weatherInCelsius.getName());
+        responseBuilder.withDescription(weatherInCelsius.getWeather()[0].getDescription());
+        responseBuilder.withTempInCelcius(weatherInCelsius.getMain().getTemp());
+        responseBuilder.withTempInfaranheit(weatherInFahrenheit.getMain().getTemp());
+
+        date.setTimeInMillis(weatherInCelsius.getSys().getSunrise());
+        responseBuilder.withSunrise(date.getTime());
+
+        date.setTimeInMillis(weatherInCelsius.getSys().getSunset());
+        responseBuilder.withSunset(date.getTime());
 
         return responseBuilder.build();
     }

@@ -6,6 +6,8 @@ import org.junit.Test;
 
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Calendar;
+
 /**
  * Created by omib on 20/06/2016.
  */
