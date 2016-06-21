@@ -1,7 +1,8 @@
-package main.com.weather.app.service;
+package com.weather.app.service;
 
-import main.com.weather.app.cache.WeatherCache;
-import main.com.weather.app.entity.WeatherDetails;
+import com.weather.app.cache.WeatherCache;
+import com.weather.app.entity.WeatherDetails;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,6 +13,7 @@ public class WeatherServiceImpl implements WeatherService
 {
     private final WeatherCache weatherCache;
 
+    @Autowired
     public WeatherServiceImpl(WeatherCache weatherCache)
     {
         this.weatherCache = weatherCache;
@@ -20,7 +22,7 @@ public class WeatherServiceImpl implements WeatherService
     @Override
     public WeatherDetails getWeatherFor(String city)
     {
-        return null;
+        return weatherCache.getWeatherFor(city);
     }
 
     @Override

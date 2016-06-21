@@ -1,6 +1,7 @@
-package main.com.weather.app.cache;
+package com.weather.app.cache;
 
-import main.com.weather.app.entity.WeatherDetails;
+
+import com.weather.app.entity.WeatherDetails;
 
 /**
  * Created by omib on 20/06/2016.

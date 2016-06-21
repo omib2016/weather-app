@@ -1,7 +1,11 @@
-package main.com.weather.app.cache;
+package com.weather.app.cache;
 
-import main.com.weather.app.entity.WeatherDetails;
-import main.com.weather.app.service.RemoteService;
+import com.weather.app.entity.WeatherDetails;
+import com.weather.app.service.RemoteService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -9,8 +13,11 @@ import java.util.concurrent.*;
 /**
  * Created by omib on 20/06/2016.
  */
+@Component
 public class WeatherCacheImpl implements WeatherCache
 {
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     //weather cache keyed on city
     private final ConcurrentMap<String,WeatherDetails> weatherCache = new ConcurrentHashMap<>();
     //subscription set used to subscribe for weather updates
@@ -20,13 +27,13 @@ public class WeatherCacheImpl implements WeatherCache
     //scheduler
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     //configurable polling interval
-    private final int intervalInSeconds;
+    private final int intervalInSeconds = 5;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public WeatherCacheImpl(RemoteService remoteService, int intervalInSeconds)
+    @Autowired
+    public WeatherCacheImpl(RemoteService remoteService)
     {
         this.remoteService = remoteService;
-        this.intervalInSeconds = intervalInSeconds;
     }
 
 
@@ -35,12 +42,20 @@ public class WeatherCacheImpl implements WeatherCache
     {
         if (weatherCache.containsKey(city))
         {
+            log.info("Looking up cache for "+city);
             return weatherCache.get(city);
         }
-        else {
+        else
+        {
+            log.info("Subscription made for "+city);
             subscriptionSet.add(city);
             WeatherDetails weatherDetailsForCity = remoteService.getWeatherDetailsForCity(city);
-            weatherCache.replace(city,weatherDetailsForCity);
+            WeatherDetails previousValue = weatherCache.replace(city, weatherDetailsForCity);
+            if (previousValue == null)
+            {
+                weatherCache.putIfAbsent(city,weatherDetailsForCity);
+            }
+            log.info("Updated cache for "+city);
             return weatherDetailsForCity;
         }
     }
@@ -49,7 +64,7 @@ public class WeatherCacheImpl implements WeatherCache
     public boolean populate()
     {
         //update each city weather every 5 minutes
-        scheduledExecutorService.schedule(new WeatherRunnable(), intervalInSeconds, TimeUnit.SECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(new WeatherRunnable(),0,intervalInSeconds, TimeUnit.SECONDS);
 
         return true;
     }
@@ -65,6 +80,7 @@ public class WeatherCacheImpl implements WeatherCache
 
     private class WeatherRunnable implements Runnable
     {
+
         @Override
         public void run()
         {
@@ -73,9 +89,15 @@ public class WeatherCacheImpl implements WeatherCache
 
         private boolean updateAll()
         {
+            log.info("Starting Updater threads..");
+            if (subscriptionSet.size() == 0)
+            {
+                log.info("No cities have been subscribed for weather updates yet..");
+            }
+
             for (String city : subscriptionSet)
             {
-               executorService.submit(new WeatherUpdater(remoteService,city));
+               executorService.submit(new WeatherUpdater(city));
             }
 
             return true;
@@ -84,21 +106,24 @@ public class WeatherCacheImpl implements WeatherCache
 
     private class WeatherUpdater implements Runnable
     {
-        private final RemoteService remoteService;
         private final String city;
 
-        private WeatherUpdater(RemoteService remoteService, String city)
+        private WeatherUpdater(String city)
         {
-
-            this.remoteService = remoteService;
             this.city = city;
         }
 
         @Override
         public void run()
         {
+            log.info("Updating weather for "+city);
             WeatherDetails latestWeather = remoteService.getWeatherDetailsForCity(city);
-            weatherCache.replace(city,latestWeather);
+            WeatherDetails previousValue = weatherCache.replace(city, latestWeather);
+            if (previousValue == null)
+            {
+                weatherCache.putIfAbsent(city,latestWeather);
+            }
+            log.info("Updated cache for "+city);
         }
     }
 }
