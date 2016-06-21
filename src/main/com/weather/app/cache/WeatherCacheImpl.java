@@ -27,7 +27,7 @@ public class WeatherCacheImpl implements WeatherCache
     //scheduler
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     //configurable polling interval
-    private final int intervalInSeconds = 5;
+    private final int intervalInSeconds = 3000;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     @Autowired
