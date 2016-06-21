@@ -20,6 +20,7 @@ JDK 1.8.0_40 or higher & Maven 3.3 or higher
 1. Due to lack of time , I could not add more unit tests. For a production rollout, I would increase unit test coverage & add  integration tests.
 2. I would add property files per environment - dev/test/uat/prod.
 3. Due to lack of time , the weather details(dates/sunrise & sunsets) dont have the precise formatting as specified in the question.This would need to be amended as well before a production rollout.
+4. The service also provides startup & shutdown hooks which could be exposed via an "AdminController" to a admin UI - which could then be used for phased startup & shutdown of the service.
 
 
 
